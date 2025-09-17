@@ -3,6 +3,7 @@
 import logging
 import re
 import sys
+from collections import Counter
 
 import click
 import dotenv
@@ -82,7 +83,9 @@ def main(verbose: bool, input_filename: str) -> int:
     # TODO cache embeddings model as well
     ragas_cacher = DiskCacheBackend(cache_dir="ragas_llm_cache")
     cached_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o"), cache=ragas_cacher)
-    cached_embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(), cache=ragas_cacher)
+    cached_embeddings = LangchainEmbeddingsWrapper(
+        OpenAIEmbeddings(), cache=ragas_cacher
+    )
 
     metrics = [ResponseRelevancy(llm=cached_llm, embeddings=cached_embeddings)]
 
@@ -91,11 +94,14 @@ def main(verbose: bool, input_filename: str) -> int:
     for model in answer_cols:
         print(f"====={model}=====")
 
-        evals = evaluate_model(df, model, metrics)
+        evaluations = evaluate_model(df, model, metrics)
+        print(evaluations)
+
+        scores = [s["answer_relevancy"] for s in evaluations.scores]
+
+        for c in Counter(scores).most_common():
+            print(c)
         print()
-        for eval in evals.scores:
-            print(eval)
-        print(evals)
 
 
 if __name__ == "__main__":
